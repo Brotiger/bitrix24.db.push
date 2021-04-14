@@ -134,7 +134,7 @@ class Notification{
         $sqlQuery = "SELECT * FROM b_file WHERE ID = ".$id;
         $queryResult = $DB->Query($sqlQuery);
         $photo = $queryResult->GetNext();
-        $photo_path = '/upload/resize_cache/'.$photo['SUBDIR'].'/100_100_2/'.$photo['ORIGINAL_NAME'];
+        $photo_path = '/upload/resize_cache/'.$photo['SUBDIR'].'/100_100_2/'.$photo['FILE_NAME'];
         return $photo_path;
     }
 
