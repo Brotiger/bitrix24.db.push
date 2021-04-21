@@ -63,9 +63,9 @@ class db_push extends CModule{
     }
 
     public function InstallFiles(){
-        CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/local/modules/".$this->MODULE_ID."/install/js", $_SERVER["DOCUMENT_ROOT"]."/bitrix/templates/bitrix24/".get_class($this), true, true);
-        CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/local/modules/".$this->MODULE_ID."/install/ajax", $_SERVER["DOCUMENT_ROOT"]."/ajax", true, true);
-        CopyDirFiles($_SERVER["DOCUMENT_ROOT"]."/local/modules/".$this->MODULE_ID."/install/img", $_SERVER["DOCUMENT_ROOT"]."/upload/".get_class($this), true, true);
+        CopyDirFiles(dirname(__FILE__)."/js", $_SERVER["DOCUMENT_ROOT"]."/bitrix/templates/bitrix24/".get_class($this), true, true);
+        CopyDirFiles(dirname(__FILE__)."/ajax", $_SERVER["DOCUMENT_ROOT"]."/ajax", true, true);
+        CopyDirFiles(dirname(__FILE__)."/img", $_SERVER["DOCUMENT_ROOT"]."/upload/".get_class($this), true, true);
 
         return false;
     }
