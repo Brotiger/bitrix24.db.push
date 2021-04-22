@@ -1,6 +1,6 @@
 class dbPush {
     constructor(time) {
-        this.time = time? time: 1;
+        this.time = time? time: 5;
         if(Notification.permission === "granted"){
             setInterval(this.getNotifications, this.time * 60 * 1000);
         }else if(Notification.permission !== "denied"){

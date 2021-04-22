@@ -11,8 +11,7 @@ class Notification{
 
     public function getAll(){
         $thisUserChats = self::getChatArrID(); //Получаем список чатов в которых есть текущий пользователь
-        $lastNotify = self::getLastMessageInChats($thisUserChats); //Получаем список последних сообщений в различных чатах
-        $lastNotify = array_merge($lastNotify, self::getLastTasks($thisUserChats));
+        $lastNotify = self::getNotify($thisUserChats); //Получаем список последних сообщений в различных чатах
         return $lastNotify;
     }
 
@@ -31,13 +30,13 @@ class Notification{
         return $result;
     }
 
-    private function getLastMessageInChats($thisUserChats){
+    private function getNotify($thisUserChats){
         global $USER, $DB;
 
         $result = [];
         
         foreach($thisUserChats as $chatId){
-            $sqlQuery = "SELECT ID, AUTHOR_ID, MESSAGE FROM b_im_message WHERE CHAT_ID = ".$chatId." AND AUTHOR_ID != ".$USER->GetID()." AND NOTIFY_READ = 'N' ORDER BY DATE_CREATE DESC LIMIT 1";
+            $sqlQuery = "SELECT ID, AUTHOR_ID, MESSAGE FROM b_im_message WHERE CHAT_ID = ".$chatId." AND NOTIFY_READ = 'N' ORDER BY DATE_CREATE DESC LIMIT 1";
             $queryResult = $DB->Query($sqlQuery);
 
             if($message = $queryResult->GetNext()){
@@ -52,42 +51,12 @@ class Notification{
                     $authorName = 'Bitrix 24';
                 }
 
-                $result[] = [
-                    'message' => self::filterMessage($message['MESSAGE']),
-                    'authorName' => $authorName,
-                    'icon' => $author['PHOTO'],
-                ];
-            }
-            self::setSent($message['ID']);
-        }
-        return $result;
-    }
-
-    private function getLastTasks($thisUserChats){
-        global $USER, $DB;
-
-        $result = [];
-        
-        foreach($thisUserChats as $chatId){
-            $sqlQuery = "SELECT ID, AUTHOR_ID, MESSAGE FROM b_im_message WHERE CHAT_ID = ".$chatId." AND NOTIFY_MODULE = 'tasks' ORDER BY DATE_CREATE DESC LIMIT 1";
-            $queryResult = $DB->Query($sqlQuery);
-
-            if($message = $queryResult->GetNext()){
-                if(self::alreadySent($message['ID'])) continue;
-                $author = self::getUserById($message['AUTHOR_ID']);
-
-                if($author['NAME'] && $author['LAST_NAME']){
-                    $authorName = $author['NAME']." ".$author['LAST_NAME'];
-                }else if($author['LOGIN']){
-                    $authorName = $author['LOGIN'];
-                }else{
-                    $authorName = 'Bitrix 24';
-                }
+                $icon = $author['FILE_NAME'] != null ? '/upload/resize_cache/'.$author['SUBDIR'].'/100_100_2/'.$author['FILE_NAME'] : '/upload/db_push/bitrix24.png';
 
                 $result[] = [
                     'message' => self::filterMessage($message['MESSAGE']),
                     'authorName' => $authorName,
-                    'icon' => $author['PHOTO'],
+                    'icon' => $icon
                 ];
             }
             self::setSent($message['ID']);
@@ -97,6 +66,7 @@ class Notification{
 
     private function setSent($id){
         global $USER, $DB;
+        
         $fields = array(
             "user_id" => $USER->GetID(),
             "notify_id" => $id
@@ -122,20 +92,11 @@ class Notification{
 
     private function getUserById($id){
         global $DB;
-        $sqlQuery = "SELECT * FROM b_user WHERE ID = ".$id;
+        $sqlQuery = "SELECT NAME, LAST_NAME, LOGIN, SUBDIR, FILE_NAME FROM b_user LEFT JOIN b_file ON PERSONAL_PHOTO = b_file.ID WHERE b_user.ID = ".$id;
         $queryResult = $DB->Query($sqlQuery);
         $user = $queryResult->GetNext();
         $user['PHOTO'] = $user['PERSONAL_PHOTO'] != null ? self::getUserIconById($user['PERSONAL_PHOTO']): '/upload/db_push/bitrix24.png';
         return $user;
-    }
-
-    private function getUserIconById($id){
-        global $DB;
-        $sqlQuery = "SELECT * FROM b_file WHERE ID = ".$id;
-        $queryResult = $DB->Query($sqlQuery);
-        $photo = $queryResult->GetNext();
-        $photo_path = '/upload/resize_cache/'.$photo['SUBDIR'].'/100_100_2/'.$photo['FILE_NAME'];
-        return $photo_path;
     }
 
     private function filterMessage($message){
