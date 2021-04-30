@@ -10,8 +10,10 @@ class Notification{
     private static $db = "db_push";
 
     public function getAll(){
-        $thisUserChats = self::getChatArrID(); //Получаем список чатов в которых есть текущий пользователь
-        $lastNotify = self::getNotify($thisUserChats); //Получаем список последних сообщений в различных чатах
+        $thisUserChats = self::getChatArrID();
+        $lastMessages = self::getMessages($thisUserChats);
+        $lastTasks = self::getTasks($thisUserChats);
+        $lastNotify = array_merge($lastMessages, $lastTasks);
         return $lastNotify;
     }
 
@@ -30,13 +32,47 @@ class Notification{
         return $result;
     }
 
-    private function getNotify($thisUserChats){
+    private function getMessages($thisUserChats){
         global $USER, $DB;
 
         $result = [];
         
         foreach($thisUserChats as $chatId){
-            $sqlQuery = "SELECT ID, AUTHOR_ID, MESSAGE FROM b_im_message WHERE CHAT_ID = ".$chatId." AND NOTIFY_READ = 'N' ORDER BY DATE_CREATE DESC LIMIT 1";
+            $sqlQuery = "SELECT ID, AUTHOR_ID, MESSAGE FROM b_im_message WHERE AUTHOR_ID != ".$USER->GetID()." AND CHAT_ID = ".$chatId." AND NOTIFY_READ = 'N' ORDER BY DATE_CREATE DESC LIMIT 1";
+            $queryResult = $DB->Query($sqlQuery);
+
+            if($message = $queryResult->GetNext()){
+                if(self::alreadySent($message['ID'])) continue;
+                $author = self::getUserById($message['AUTHOR_ID']);
+
+                if($author['NAME'] && $author['LAST_NAME']){
+                    $authorName = $author['NAME']." ".$author['LAST_NAME'];
+                }else if($author['LOGIN']){
+                    $authorName = $author['LOGIN'];
+                }else{
+                    $authorName = 'Bitrix 24';
+                }
+
+                $icon = $author['FILE_NAME'] != null ? '/upload/resize_cache/'.$author['SUBDIR'].'/100_100_2/'.$author['FILE_NAME'] : '/upload/db_push/bitrix24.png';
+
+                $result[] = [
+                    'message' => self::filterMessage($message['MESSAGE']),
+                    'authorName' => $authorName,
+                    'icon' => $icon
+                ];
+            }
+            self::setSent($message['ID']);
+        }
+        return $result;
+    }
+
+    private function getTasks($thisUserChats){
+        global $USER, $DB;
+
+        $result = [];
+        
+        foreach($thisUserChats as $chatId){
+            $sqlQuery = "SELECT ID, AUTHOR_ID, MESSAGE FROM b_im_message WHERE NOTIFY_MODULE = 'tasks' AND CHAT_ID = ".$chatId." AND NOTIFY_READ = 'N' ORDER BY DATE_CREATE DESC LIMIT 1";
             $queryResult = $DB->Query($sqlQuery);
 
             if($message = $queryResult->GetNext()){
